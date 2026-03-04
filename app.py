@@ -2,6 +2,7 @@ import sqlite3
 import pandas as pd
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
+import urllib.parse
 
 # --- Page Config ---
 st.set_page_config(page_title="Restaurant Recommender", page_icon="🍴", layout="wide")
@@ -20,6 +21,12 @@ user_cuisine = st.sidebar.selectbox("Cuisine", cuisines, index=2)
 user_area = st.sidebar.selectbox("Area", areas, index=0)
 min_rating = st.sidebar.slider("Min Rating", 0.0, 5.0, 3.0, 0.1)
 min_discount = st.sidebar.slider("Min Discount", 0.0, 1.0, 0.35, 0.05)
+
+# --- Function to get dynamic images ---
+def get_restaurant_image(name):
+    query = urllib.parse.quote(name + " restaurant")
+    url = f"https://source.unsplash.com/400x300/?{query}"
+    return url
 
 # --- Show Recommendations Button ---
 if st.button("Show Recommendations"):
@@ -71,10 +78,8 @@ if st.button("Show Recommendations"):
             with st.container():
                 cols = st.columns([1,3])
                 
-                # --- Dynamic image from Google/Unsplash style search ---
-                query = row['restaurant_name'] + " restaurant"
-                img_url = f"https://source.unsplash.com/400x300/?{query.replace(' ', ',')}"
-                
+                # --- Dynamic image from Unsplash (works reliably) ---
+                img_url = get_restaurant_image(row['restaurant_name'])
                 with cols[0]:
                     st.image(img_url, width=120)
                 with cols[1]:
