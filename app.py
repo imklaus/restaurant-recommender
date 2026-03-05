@@ -4,7 +4,11 @@ import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- Page Config ---
-st.set_page_config(page_title="Restaurant Recommender", page_icon="🍴", layout="wide")
+st.set_page_config(page_title="AI Restaurant Recommender", page_icon="🍴", layout="wide")
+
+# --- Main Heading at top center ---
+st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>AI Restaurant Recommendation System</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
 # --- Load DB ---
 conn = sqlite3.connect("restaurant_db.db")
@@ -12,7 +16,7 @@ master_table_encoded = pd.read_sql("SELECT * FROM restaurants", conn)
 conn.close()
 
 # --- Sidebar: Filters ---
-st.sidebar.header("Filter Restaurants")
+st.sidebar.header("Find Your Restaurant 🍽️")
 
 cuisines = ['Café & Beverages', 'Continental / Western', 'Pan-Asian', 'South Asian']
 areas = ['Dha Phase 6', 'Gulberg', 'Johar Town']
