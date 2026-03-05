@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(page_title="AI Restaurant Recommender", page_icon="🍴", layout="wide")
 
 # --- Main Heading at top center ---
-st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>AI Restaurant Recommendation System</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #FFFFFF;'>AI Restaurant Recommendation System</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Load DB ---
