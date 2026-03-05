@@ -82,7 +82,7 @@ if show_btn:
                 cols = st.columns([1, 3])
                 img_url = row['image_url'] if 'image_url' in row else "https://via.placeholder.com/100"
                 with cols[0]:
-                    st.image(img_url, width=450)
+                    st.image(img_url, width=650)
                 with cols[1]:
                     st.markdown(f"### {row['restaurant_name']}")
                     st.markdown(f"⭐ Rating: {row['google_rating']}")
