@@ -3,10 +3,10 @@ import sqlite3
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 
-# ---------------- PAGE CONFIG ----------------
+# ---------------- PAGE ----------------
 
 st.set_page_config(
-    page_title="Restaurant Recommendation Engine",
+    page_title="Restaurant Recommender",
     page_icon="🍽️",
     layout="wide"
 )
@@ -17,52 +17,62 @@ st.markdown("""
 <style>
 
 .main {
-background-color:#f5f7fb;
+background:#f4f6fb;
 }
 
 .header {
-background: linear-gradient(90deg,#1f2937,#111827);
-padding:35px;
+background: linear-gradient(90deg,#111827,#1f2937);
+padding:30px;
 border-radius:14px;
 color:white;
-margin-bottom:30px;
+margin-bottom:25px;
 }
 
 .title {
-font-size:40px;
+font-size:38px;
 font-weight:700;
 }
 
 .card {
-background:white;
-padding:24px;
+background:rgba(255,255,255,0.95);
+padding:22px;
 border-radius:16px;
-box-shadow:0 6px 24px rgba(0,0,0,0.08);
+box-shadow:0 8px 25px rgba(0,0,0,0.08);
 margin-bottom:18px;
 }
 
 .top-card {
-background:linear-gradient(120deg,#fff9e6,#ffffff);
 border:2px solid #ffd54f;
+background:linear-gradient(120deg,#fff9e6,#ffffff);
 }
 
 .restaurant {
 font-size:22px;
-font-weight:600;
+font-weight:700;
+color:#111;
 }
 
 .meta {
-color:#666;
+color:#444;
 font-size:14px;
-margin-top:4px;
+margin-top:5px;
 }
 
-.discount {
-background:#eef4ff;
-padding:5px 12px;
+.bank {
+display:inline-block;
+padding:6px 12px;
 border-radius:8px;
 font-size:13px;
 margin-right:6px;
+font-weight:600;
+}
+
+.hbl {background:#e7f6ed;color:#008f3b;}
+.meezan {background:#e8f3ff;color:#0057b8;}
+.ubl {background:#fff0f0;color:#c00000;}
+
+img {
+border-radius:12px;
 }
 
 </style>
@@ -76,36 +86,36 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- LOAD DATABASE ----------------
+# ---------------- DATABASE ----------------
 
 conn = sqlite3.connect("restaurant_db.db")
 master_table_encoded = pd.read_sql("SELECT * FROM restaurants", conn)
 conn.close()
 
-# ---------------- FILTER OPTIONS ----------------
+# ---------------- FILTERS (SIDEBAR) ----------------
 
-cuisines = ['Café & Beverages', 'Continental / Western', 'Pan-Asian', 'South Asian']
-areas = ['Dha Phase 6', 'Gulberg', 'Johar Town']
+st.sidebar.header("Filters")
 
-# ---------------- FILTER UI ----------------
+cuisines = ['Café & Beverages','Continental / Western','Pan-Asian','South Asian']
+areas = ['Dha Phase 6','Gulberg','Johar Town']
 
-col1,col2,col3,col4 = st.columns(4)
+user_cuisine = st.sidebar.selectbox("Cuisine", cuisines)
+user_area = st.sidebar.selectbox("Area", areas)
 
-with col1:
-    user_cuisine = st.selectbox("Cuisine", cuisines)
+min_rating = st.sidebar.slider("Minimum Rating",0.0,5.0,3.0,0.1)
+min_discount = st.sidebar.slider("Minimum Discount",0.0,1.0,0.30,0.05)
 
-with col2:
-    user_area = st.selectbox("Area", areas)
+run = st.sidebar.button("Find Restaurants")
 
-with col3:
-    min_rating = st.slider("Minimum Rating",0.0,5.0,3.0,0.1)
+# ---------------- IMAGE FUNCTION ----------------
 
-with col4:
-    min_discount = st.slider("Minimum Discount",0.0,1.0,0.30,0.05)
+def get_restaurant_image(name):
 
-run = st.button("Find Restaurants")
+    query = name.replace(" ","+")
 
-# ---------------- RECOMMENDATION ENGINE ----------------
+    return f"https://source.unsplash.com/600x400/?restaurant,{query}"
+
+# ---------------- ENGINE ----------------
 
 if run:
 
@@ -163,7 +173,7 @@ if run:
             ascending=False
         ).head(3)
 
-        # ---------------- DISPLAY RESULTS ----------------
+        # ---------------- DISPLAY ----------------
 
         rank = 1
 
@@ -174,36 +184,39 @@ if run:
             if rank == 1:
                 card_class = "card top-card"
 
-            st.markdown(f"""
-            <div class="{card_class}">
+            image_url = get_restaurant_image(row['restaurant_name'])
 
-            <div style="display:flex;justify-content:space-between">
+            st.markdown(f'<div class="{card_class}">', unsafe_allow_html=True)
 
-            <div>
+            col1,col2 = st.columns([1,2])
 
-            <div class="restaurant">
-            #{rank} {row['restaurant_name']}
-            </div>
+            with col1:
+                st.image(image_url)
 
-            <div class="meta">
-            Rating: {row['google_rating']} |
-            Trending: {row['trending_label']} |
-            Sentiment: {row['sentiment_label']}
-            </div>
+            with col2:
 
-            <div style="margin-top:12px">
+                st.markdown(f"""
+                <div class="restaurant">🍽️ #{rank} {row['restaurant_name']}</div>
+                <div class="meta">
+                Rating: {row['google_rating']} |
+                Trending: {row['trending_label']} |
+                Sentiment: {row['sentiment_label']}
+                </div>
+                """, unsafe_allow_html=True)
 
-            <span class="discount">HBL {int(row['hbl_discount']*100)}%</span>
-            <span class="discount">Meezan {int(row['meezan_discount']*100)}%</span>
-            <span class="discount">UBL {int(row['ubl_discount']*100)}%</span>
+                banks = ""
 
-            </div>
+                if row['hbl_discount']>0:
+                    banks += f'<span class="bank hbl">HBL {int(row["hbl_discount"]*100)}%</span>'
 
-            </div>
+                if row['meezan_discount']>0:
+                    banks += f'<span class="bank meezan">Meezan {int(row["meezan_discount"]*100)}%</span>'
 
-            </div>
+                if row['ubl_discount']>0:
+                    banks += f'<span class="bank ubl">UBL {int(row["ubl_discount"]*100)}%</span>'
 
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown(banks, unsafe_allow_html=True)
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
             rank += 1
