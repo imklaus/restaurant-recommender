@@ -1,4 +1,3 @@
-
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -64,11 +63,6 @@ padding:5px 12px;
 border-radius:8px;
 font-size:13px;
 margin-right:6px;
-}
-
-.rank {
-font-size:26px;
-font-weight:700;
 }
 
 </style>
@@ -213,4 +207,3 @@ if run:
             """, unsafe_allow_html=True)
 
             rank += 1
-```
