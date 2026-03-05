@@ -1,18 +1,9 @@
-import sqlite3
-import pandas as pd
-import streamlit as st
-from sklearn.metrics.pairwise import cosine_similarity
-
-# --- Page Config ---
-st.set_page_config(page_title="Restaurant Recommender", page_icon="🍴", layout="wide")
-
-# --- Load DB ---
-conn = sqlite3.connect("restaurant_db.db")
-master_table_encoded = pd.read_sql("SELECT * FROM restaurants", conn)
-conn.close()
-
-# --- Sidebar Filters ---
+# --- Sidebar Filters & Button ---
 st.sidebar.header("Filter Restaurants")
+
+# Move button here
+show_btn = st.sidebar.button("Show Recommendations")
+
 cuisines = ['Café & Beverages', 'Continental / Western', 'Pan-Asian', 'South Asian']
 areas = ['Dha Phase 6', 'Gulberg', 'Johar Town']
 
@@ -21,8 +12,8 @@ user_area = st.sidebar.selectbox("Area", areas, index=0)
 min_rating = st.sidebar.slider("Min Rating", 0.0, 5.0, 3.0, 0.1)
 min_discount = st.sidebar.slider("Min Discount", 0.0, 1.0, 0.35, 0.05)
 
-# --- Show Recommendations Button ---
-if st.button("Show Recommendations"):
+# --- Show Recommendations ---
+if show_btn:
 
     # --- User vector ---
     user_vector = pd.Series(0, index=[
@@ -69,14 +60,12 @@ if st.button("Show Recommendations"):
         for idx, row in filtered.iterrows():
             with st.container():
                 cols = st.columns([1,3])
-                # Real image from dataset
                 img_url = row['image_url'] if 'image_url' in row else "https://via.placeholder.com/100"
                 with cols[0]:
                     st.image(img_url, width=120)
                 with cols[1]:
                     st.markdown(f"### {row['restaurant_name']}")
                     st.markdown(f"⭐ Rating: {row['google_rating']}")
-                    # Colored bank badges
                     discount_badges = []
                     for col, bank in zip(discount_cols, ['HBL','Meezan','UBL']):
                         if row[col] > 0:
