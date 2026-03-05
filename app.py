@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(page_title="AI Restaurant Recommender", page_icon="🍴", layout="wide")
 
 # --- Main Heading at top center ---
-st.markdown("<h1 style='text-align: center; color: #FFFFFF;'>AI Restaurant Recommendation System</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #FFFFFF;'>AI Restaurant Recommendation Syystem</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Load DB ---
@@ -82,7 +82,7 @@ if show_btn:
                 cols = st.columns([1, 3])
                 img_url = row['image_url'] if 'image_url' in row else "https://via.placeholder.com/100"
                 with cols[0]:
-                    st.image(img_url, width=650)
+                    st.image(img_url, width=6500)
                 with cols[1]:
                     st.markdown(f"### {row['restaurant_name']}")
                     st.markdown(f"⭐ Rating: {row['google_rating']}")
