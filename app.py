@@ -1,124 +1,86 @@
-import streamlit as st
+import sqlite3
 import pandas as pd
-import numpy as np
-import re
+import streamlit as st
+from sklearn.metrics.pairwise import cosine_similarity
 
-# -----------------------------
-# Page Config
-# -----------------------------
-st.set_page_config(
-    page_title="Restaurant Recommender",
-    page_icon="🍽️",
-    layout="wide"
-)
+# --- Page Config ---
+st.set_page_config(page_title="Restaurant Recommender", page_icon="🍴", layout="wide")
 
-st.title("🍽️ Restaurant Recommendation System")
+# --- Load DB ---
+conn = sqlite3.connect("restaurant_db.db")
+master_table_encoded = pd.read_sql("SELECT * FROM restaurants", conn)
+conn.close()
 
-# -----------------------------
-# Load Dataset
-# -----------------------------
-@st.cache_data
-def load_data():
-    df = pd.read_csv("restaurant_final_dataset.csv")
-    return df
+# --- Sidebar Filters ---
+st.sidebar.header("Filter Restaurants")
+cuisines = ['Café & Beverages', 'Continental / Western', 'Pan-Asian', 'South Asian']
+areas = ['Dha Phase 6', 'Gulberg', 'Johar Town']
 
-df = load_data()
+user_cuisine = st.sidebar.selectbox("Cuisine", cuisines, index=2)
+user_area = st.sidebar.selectbox("Area", areas, index=0)
+min_rating = st.sidebar.slider("Min Rating", 0.0, 5.0, 3.0, 0.1)
+min_discount = st.sidebar.slider("Min Discount", 0.0, 1.0, 0.35, 0.05)
 
-# -----------------------------
-# Image function (stable)
-# -----------------------------
-def get_restaurant_image(name):
-    return "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=60"
+# --- Show Recommendations Button ---
+if st.button("Show Recommendations"):
 
-# -----------------------------
-# Bank Selection
-# -----------------------------
-bank = st.selectbox(
-    "Select your Bank",
-    ["All Banks", "HBL", "Meezan", "UBL"]
-)
+    # --- User vector ---
+    user_vector = pd.Series(0, index=[
+        'cuisine_Café & Beverages', 'cuisine_Continental / Western',
+        'cuisine_Pan-Asian', 'cuisine_South Asian',
+        'area_Dha Phase 6', 'area_Gulberg', 'area_Johar Town'
+    ])
+    user_vector[f'cuisine_{user_cuisine}'] = 1
+    user_vector[f'area_{user_area}'] = 1
 
-# -----------------------------
-# Minimum Rating Filter
-# -----------------------------
-min_rating = st.slider(
-    "Minimum Google Rating",
-    3.0,
-    5.0,
-    4.0,
-    0.1
-)
+    # --- Discount filtering ---
+    discount_cols = ['hbl_discount', 'meezan_discount', 'ubl_discount']
+    for col in discount_cols:
+        master_table_encoded[col] = master_table_encoded[col].apply(lambda x: x if x >= min_discount else 0)
+    master_table_encoded['max_discount'] = master_table_encoded[discount_cols].max(axis=1)
 
-# -----------------------------
-# Apply Filters
-# -----------------------------
-filtered = df[df["google_rating"] >= min_rating]
+    filtered = master_table_encoded[
+        (master_table_encoded[f'cuisine_{user_cuisine}'] == 1) &
+        (master_table_encoded[f'area_{user_area}'] == 1) &
+        (master_table_encoded['google_rating'] >= min_rating) &
+        (master_table_encoded['max_discount'] >= min_discount)
+    ].copy()
 
-if bank == "HBL":
-    filtered = filtered[filtered["hbl_discount"] > 0]
-
-elif bank == "Meezan":
-    filtered = filtered[filtered["meezan_discount"] > 0]
-
-elif bank == "UBL":
-    filtered = filtered[filtered["ubl_discount"] > 0]
-
-# -----------------------------
-# Ranking Score
-# -----------------------------
-filtered["score"] = (
-    filtered["google_rating_norm"] * 0.5
-    + filtered["engagement_norm"] * 0.3
-    + filtered["avg_sentiment"] * 0.2
-)
-
-final_recommendations = filtered.sort_values(
-    by="score",
-    ascending=False
-).head(10)
-
-# -----------------------------
-# Display Results
-# -----------------------------
-st.subheader("Top Recommended Restaurants")
-
-rank = 1
-
-for _, row in final_recommendations.iterrows():
-
-    image_url = get_restaurant_image(row["restaurant_name"])
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.image(image_url, use_container_width=True)
-
-    with col2:
-
-        st.markdown(
-            f"<h3 style='color:white'>🍽️ #{rank} {row['restaurant_name']}</h3>",
-            unsafe_allow_html=True
+    if filtered.empty:
+        st.warning("No restaurants match your criteria.")
+    else:
+        # --- CBF & MCDM ---
+        cbf_features = [
+            'cuisine_Café & Beverages', 'cuisine_Continental / Western',
+            'cuisine_Pan-Asian', 'cuisine_South Asian',
+            'area_Dha Phase 6', 'area_Gulberg', 'area_Johar Town'
+        ]
+        filtered['cbf_similarity'] = cosine_similarity(filtered[cbf_features], user_vector.values.reshape(1,-1))
+        filtered['mcdm_score'] = (
+            filtered['google_rating_norm']*0.4 + 
+            filtered['max_discount']*0.3 +
+            filtered['trending_norm']*0.2 +
+            filtered['avg_sentiment']*0.1
         )
+        filtered['final_score'] = filtered['cbf_similarity'] * filtered['mcdm_score']
+        filtered = filtered.sort_values('final_score', ascending=False).head(3)
 
-        st.write(
-            f"⭐ Rating: {row['google_rating']}  |  🔥 Trending: {row['trending_label']}  |  💬 Sentiment: {row['sentiment_label']}"
-        )
-
-        if row["hbl_discount"] > 0:
-            st.success(f"HBL {int(row['hbl_discount']*100)}% Discount")
-
-        if row["meezan_discount"] > 0:
-            st.info(f"Meezan {int(row['meezan_discount']*100)}% Discount")
-
-        if row["ubl_discount"] > 0:
-            st.error(f"UBL {int(row['ubl_discount']*100)}% Discount")
-
-    st.divider()
-
-    rank += 1
-
-# -----------------------------
-# Empty Case
-# -----------------------------
-if final_recommendations.empty:
-    st.warning("No restaurants found with current filters.")
+        # --- Display each restaurant as a card ---
+        for idx, row in filtered.iterrows():
+            with st.container():
+                cols = st.columns([1,3])
+                # Real image from dataset
+                img_url = row['image_url'] if 'image_url' in row else "https://via.placeholder.com/100"
+                with cols[0]:
+                    st.image(img_url, width=120)
+                with cols[1]:
+                    st.markdown(f"### {row['restaurant_name']}")
+                    st.markdown(f"⭐ Rating: {row['google_rating']}")
+                    # Colored bank badges
+                    discount_badges = []
+                    for col, bank in zip(discount_cols, ['HBL','Meezan','UBL']):
+                        if row[col] > 0:
+                            discount_badges.append(f"<span style='background-color:#4CAF50;color:white;padding:3px 6px;border-radius:5px'>{bank} {int(row[col]*100)}%</span>")
+                    st.markdown(" ".join(discount_badges), unsafe_allow_html=True)
+                    st.markdown(f"🔥 Trending: {row['trending_label']} | 😊 Sentiment: {row['sentiment_label']}")
+                st.markdown("---")
