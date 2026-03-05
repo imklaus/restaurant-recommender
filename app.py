@@ -11,13 +11,9 @@ conn = sqlite3.connect("restaurant_db.db")
 master_table_encoded = pd.read_sql("SELECT * FROM restaurants", conn)
 conn.close()
 
-# --- Sidebar: Filters & Button ---
+# --- Sidebar: Filters ---
 st.sidebar.header("Filter Restaurants")
 
-# Button at top
-show_btn = st.sidebar.button("Show Recommendations")
-
-# Filters
 cuisines = ['Café & Beverages', 'Continental / Western', 'Pan-Asian', 'South Asian']
 areas = ['Dha Phase 6', 'Gulberg', 'Johar Town']
 
@@ -25,6 +21,9 @@ user_cuisine = st.sidebar.selectbox("Cuisine", cuisines, index=2)
 user_area = st.sidebar.selectbox("Area", areas, index=0)
 min_rating = st.sidebar.slider("Min Rating", 0.0, 5.0, 3.0, 0.1)
 min_discount = st.sidebar.slider("Min Discount", 0.0, 1.0, 0.35, 0.05)
+
+# --- Show Recommendations button BELOW filters ---
+show_btn = st.sidebar.button("Show Recommendations")
 
 # --- Main App: Show Recommendations ---
 if show_btn:
